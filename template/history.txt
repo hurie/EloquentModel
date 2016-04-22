@@ -1,0 +1,46 @@
+
+    protected $isSkipRevision = false;
+
+    protected function saveRevision()
+    {{
+        if ($this->isSkipRevision)
+            return;
+
+        /* @var $Akun Akun */
+        $Akun = \Auth::user();
+
+        \DB::statement('INSERT INTO {table}_salah
+SELECT NULL, CURRENT_TIMESTAMP(), {table}.*, :hid
+FROM {table}
+WHERE {key} = :id', [
+            'hid' => $Akun ? $Akun->akun_id : null,
+            'id' => $this->{key},
+        ]);
+
+        $this->isSkipRevision = true;
+    }}
+
+    public static function boot()
+    {{
+        parent::boot();
+
+        static::updating(function ($Model) {{
+            /* @type $Model {model} */
+            $Model->saveRevision();
+        }});
+
+        static::deleting(function ($Model) {{
+            /* @type $Model {model} */
+            $Model->saveRevision();
+        }});
+    }}
+
+    public function __construct(array $attributes = [])
+    {{
+        parent::__construct($attributes);
+
+        $Model = $this;
+        \Event::listen('Illuminate\Database\Events\Transaction*', function () use ($Model) {{
+            $Model->isSkipRevision = false;
+        }});
+    }}

@@ -1,0 +1,8 @@
+
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany|Builder
+     */
+    public function {ref}()
+    {{
+        return $this->hasMany('{namespace}\{model}', '{column}', '{ref_column}');
+    }}

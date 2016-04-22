@@ -16,6 +16,48 @@ from mysql.connector import connection
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(process)d:%(name)s - %(levelname)s - %(message)s')
 _log = logging.getLogger(__name__)
 
+default_type = 'mixed'
+datetime_type = '\Carbon\Carbon'
+string_type = 'string'
+integer_type = 'integer'
+boolean_type = 'boolean'
+float_type = 'float'
+
+column_type = {
+    'created_at': datetime_type,
+    'updated_at': datetime_type,
+    'deleted_at': datetime_type,
+}
+
+type_map = {
+    'bigint': integer_type,
+    'bit': integer_type,
+    'bool': boolean_type,
+    'boolean': boolean_type,
+    'char': string_type,
+    'date': datetime_type,
+    'datetime': datetime_type,
+    'decimal': float_type,
+    'double': float_type,
+    'enum': string_type,
+    'float': float_type,
+    'int': integer_type,
+    'longtext': string_type,
+    'mediumint': integer_type,
+    'mediumtext': string_type,
+    'numeric': float_type,
+    'real': float_type,
+    'set': string_type,
+    'smallint': integer_type,
+    'text': string_type,
+    'time': datetime_type,
+    'timestamp': datetime_type,
+    'tinyint': integer_type,
+    'tinytext': string_type,
+    'varchar': string_type,
+    'year': integer_type,
+}
+
 
 @lru_cache(maxsize=128)
 def camelize(text):
@@ -55,11 +97,77 @@ def plural(noun):
             return result
 
 
+def table_definition(cnx):
+    tables = defaultdict(lambda: {
+        'class': None,
+        'key': 'id',
+        'autoincrement': 'false',
+        'column': OrderedDict(),
+        'fillable': [],
+        'date': [],
+        'null': [],
+        'parent': OrderedDict(),
+        'child': OrderedDict(),
+    })
+
+    with closing(cnx.cursor()) as cursor:
+        cursor.execute('''\
+SELECT TABLE_NAME, COLUMN_NAME, COLUMN_KEY, IS_NULLABLE, DATA_TYPE, EXTRA
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_SCHEMA = DATABASE()
+''')
+
+        for table, column, key, null, col_type, extra in cursor:
+            properties = tables[table]
+            properties['name'] = camelize(table)
+
+            if key == 'PRI':
+                properties['key'] = column
+
+            if 'auto_increment' in extra:
+                properties['autoincrement'] = 'true'
+
+            if null == 'YES':
+                properties['null'].append(column)
+
+            if column not in ['id', 'created_at', 'updated_at', 'deleted_at']:
+                properties['fillable'].append(column)
+
+            type_ = column_type.get(column)
+            if type_ is None:
+                type_ = type_map.get(col_type, default_type)
+                if type_ == datetime_type:
+                    properties['date'].append(column)
+
+            properties['column'][column] = type_
+
+    return tables
+
+
+def load_relation(cnx, tables):
+    with closing(cnx.cursor()) as cursor:
+        cursor.execute('''\
+SELECT TABLE_NAME, COLUMN_NAME, REFERENCED_TABLE_NAME, REFERENCED_COLUMN_NAME
+FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE
+WHERE TABLE_SCHEMA = DATABASE()
+  AND REFERENCED_TABLE_SCHEMA = DATABASE()
+  AND REFERENCED_TABLE_NAME IS NOT NULL
+''')
+
+        for table, column, ref_table, ref_column in cursor:
+            tables[table]['parent'][ref_table] = (column, ref_column)
+            tables[ref_table]['child'][table] = (column, ref_column)
+
+
 def main():
     namespace = r'App\Models'
 
     ignore = [
         'failed_jobs'
+    ]
+
+    hidden_column = [
+        'passwd'
     ]
 
     db = {
@@ -69,330 +177,195 @@ def main():
         'database': 'epkbdb',
     }
 
-    path = Path(r'D:\Users\Azhar\Projects\GPO-EPKB\models')
-    _log.info('cleanup %s', path)
-    for f in path.iterdir():
+    # db = {
+    #     'user': 'admsiap20',
+    #     'password': '$dm2siap',
+    #     'host': '172.17.1.23',
+    #     'database': 'epkbdb',
+    # }
+
+    history_suffix = '_salah'
+
+    path_model = Path(r'D:\Users\Azhar\Projects\GPO-EPKB\models')
+    path_template = Path(os.path.realpath(os.path.dirname(__file__))) / 'template'
+
+    _log.info('cleanup %s', path_model)
+    for f in path_model.iterdir():
         if f.is_file():
             f.unlink()
 
-    tables = defaultdict(lambda: {
-        'key': 'id',
-        'autoincrement': False,
-        'column': OrderedDict(),
-        'fillable': [],
-        'date': [],
-        'null': [],
-        'parent': OrderedDict(),
-        'child': OrderedDict(),
-    })
+    template_history = (path_template / 'history.txt').read_text()
+    template_one_to_one = (path_template / 'one_to_one.txt').read_text()
+    template_one_to_many = (path_template / 'one_to_many.txt').read_text()
+    template_many_to_one = (path_template / 'many_to_one.txt').read_text()
+    template_model = (path_template / 'model.txt').read_text()
 
     _log.info('connection')
     with closing(connection.MySQLConnection(**db)) as cnx:
         _log.info('loading table definition')
-        with closing(cnx.cursor()) as cursor:
-            cursor.execute('''\
-SELECT TABLE_NAME AS `table`, COLUMN_NAME AS `column`, COLUMN_KEY AS `key`, IS_NULLABLE AS `null`, DATA_TYPE AS `type`,
-  EXTRA AS `extra`
-FROM INFORMATION_SCHEMA.COLUMNS
-WHERE TABLE_SCHEMA = DATABASE()
-''')
-
-            for table, column, key, null, type_, extra in cursor:
-                if column not in ['id', 'created_at', 'updated_at', 'deleted_at']:
-                    tables[table]['fillable'].append(column)
-
-                if 'auto_increment' in extra:
-                    tables[table]['autoincrement'] = True
-
-                if key == 'PRI':
-                    tables[table]['key'] = column
-
-                if type_ in ['created_at',
-                             'updated_at',
-                             'deleted_at']:
-                    type_ = '\Carbon\Carbon'
-
-                elif type_ in ['date',
-                               'datetime',
-                               'time',
-                               'timestamp']:
-                    type_ = '\Carbon\Carbon'
-                    tables[table]['date'].append(column)
-
-                elif type_ in ['char',
-                               'enum',
-                               'longtext',
-                               'mediumtext',
-                               'set',
-                               'text',
-                               'tinytext',
-                               'varchar']:
-                    type_ = 'string'
-
-                elif type_ in ['bigint',
-                               'bit',
-                               'int',
-                               'mediumint',
-                               'smallint',
-                               'tinyint',
-                               'year']:
-                    type_ = 'integer'
-
-                elif type_ in ['decimal',
-                               'double',
-                               'float',
-                               'numeric',
-                               'real']:
-                    type_ = 'float'
-
-                elif type_ in ['bool',
-                               'boolean']:
-                    type_ = 'boolean'
-
-                else:
-                    type_ = 'mixed'
-
-                if null == 'YES':
-                    tables[table]['null'].append(column)
-
-                tables[table]['column'][column] = type_
+        tables = table_definition(cnx)
 
         _log.info('loading table relation')
-        with closing(cnx.cursor()) as cursor:
-            cursor.execute('''\
-SELECT TABLE_NAME AS `table`, COLUMN_NAME AS `column`,
-  REFERENCED_TABLE_NAME AS `ref_table`, REFERENCED_COLUMN_NAME AS `ref_column`
-FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE
-WHERE TABLE_SCHEMA = DATABASE()
-  AND REFERENCED_TABLE_SCHEMA = DATABASE()
-  AND REFERENCED_TABLE_NAME IS NOT NULL
-''')
+        load_relation(cnx, tables)
 
-            for table, column, ref_table, ref_column in cursor:
-                tables[table]['parent'][ref_table] = (column, ref_column)
-                tables[ref_table]['child'][table] = (column, ref_column)
+    for table, properties in tables.items():
+        if table in ignore:
+            continue
 
-        for table, properties in tables.items():
-            if table in ignore:
-                continue
+        _log.info('processing table %s', table)
 
-            _log.info('processing table %s', table)
+        key = properties['key']
+        name = properties['name']
 
-            name = camelize(table)
+        docs = []
+        hidden = []
+        methods = []
+        fillable = ["        '%s'" % column for column in properties['fillable']]
+        dates = []
+        casts = []
 
-            docs = []
-            methods = []
-            hidden = []
+        # property
+        props = []
+        wheres = []
+        relations = []
 
-            # property
-            columns = []
-            for column, type_ in properties['column'].items():
-                if column in properties['null']:
-                    type_ = 'null|' + type_
-                columns.append('@property {type} ${name}'.format(type=type_, name=column))
+        if (table + history_suffix) in tables:
+            methods.append(template_history.format(
+                table=table,
+                key=key,
+                model=name
+            ))
 
-            if columns:
-                docs.append('\n * '.join(columns))
+        max_length = 0
+        for column in properties['column']:
+            if column not in properties['date']:
+                max_length = max(max_length, len(column))
 
-            # relation
-            columns = []
-            for ref_table in properties['child']:
-                model = camelize(ref_table)
-                column, ref_column = properties['child'][ref_table]
+        for column, col_type in properties['column'].items():
+            prop_type = col_type
+            method = camelize(column)
 
-                if column == tables[ref_table]['key']:
-                    ref = model[0].lower() + model[1:]
+            if column in properties['null']:
+                prop_type = 'null|' + prop_type
 
-                    columns.append('@property-read {model} ${ref}'.format(model=model, ref=ref))
-                    methods.append('''\
+            if column in hidden_column:
+                hidden.append("        '%s'" % column)
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasOne|Builder
-     */
-    public function {ref}()
-    {{
-        return $this->hasOne('{namespace}\{model}', '{column}', '{ref_column}');
-    }}
-'''.format(ref=ref, namespace=namespace, model=model, column=column, ref_column=ref_column))
+            props.append('@property %s $%s' % (prop_type, column))
 
-                else:
-                    if column.startswith(properties['key']):
-                        prefix = column.replace(properties['key'], '')
-                        ref = camelize(ref_table + prefix)
-                    else:
-                        ref = model
+            wheres.append('@method static Builder|%s where%s($value)' % (name, method))
 
-                    ref = plural(ref[0].lower() + ref[1:])
+            if column in properties['date']:
+                dates.append("        '%s'" % column)
+            else:
+                casts.append("        '%s'%s => '%s'" % (column, ' ' * (max_length - len(column)), col_type))
 
-                    columns.append('@property-read Collection|{model}[] ${ref}'.format(model=model, ref=ref))
-                    methods.append('''\
+        # relation
+        for ref_table in properties['child']:
+            ref_key = tables[ref_table]['key']
+            ref_name = tables[ref_table]['name']
+            column, ref_column = properties['child'][ref_table]
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany|Builder
-     */
-    public function {ref}()
-    {{
-        return $this->hasMany('{namespace}\{model}', '{column}', '{ref_column}');
-    }}
-'''.format(ref=ref, namespace=namespace, model=model, column=column, ref_column=ref_column))
+            if column == ref_key:
+                ref = ref_name[0].lower() + ref_name[1:]
 
-            for ref_table in properties['parent']:
-                model = camelize(ref_table)
-                column, ref_column = properties['parent'][ref_table]
-
-                if column.startswith(tables[ref_table]['key']):
-                    prefix = column.replace(tables[ref_table]['key'], '')
-                    ref = camelize(ref_table + prefix)
-                else:
-                    ref = model
-
-                ref = ref[0].lower() + ref[1:]
-
-                columns.append('@property-read {model} ${ref}'.format(model=model, ref=ref))
-
-                methods.append('''\
-
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo|Builder
-     */
-    public function {ref}()
-    {{
-        return $this->belongsTo('{namespace}\{model}', '{column}', '{ref_column}');
-    }}
-'''.format(ref=ref, namespace=namespace, model=model, column=column, ref_column=ref_column))
-
-            if columns:
-                docs.append('\n * '.join(columns))
-
-            # helper method
-            columns = []
-            for column in properties['column'].keys():
-                column = camelize(column)
-                columns.append('@method static Builder|{name} where{method}($value)'.format(name=name, method=column))
-
-            if columns:
-                docs.append('\n * '.join(columns))
-
-            if (table + '_salah') in tables:
-                methods.insert(0, '''\
-
-    protected $isSkipRevision = false;
-
-    protected function saveRevision()
-    {{
-        if ($this->isSkipRevision)
-            return;
-
-        /* @var $Akun Akun */
-        $Akun = \Auth::user();
-
-        \DB::statement('INSERT INTO {table}_salah
-SELECT NULL, CURRENT_TIMESTAMP(), {table}.*, :hid
-FROM {table}
-WHERE {key} = :id', [
-            'hid' => $Akun ? $Akun->akun_id : null,
-            'id' => $this->{key},
-        ]);
-
-        $this->isSkipRevision = true;
-    }}
-
-    public static function boot()
-    {{
-        parent::boot();
-
-        static::updating(function ($Model) {{
-            /* @type $Model {model} */
-            $Model->saveRevision();
-        }});
-
-        static::deleting(function ($Model) {{
-            /* @type $Model {model} */
-            $Model->saveRevision();
-        }});
-    }}
-
-    public function __construct(array $attributes = [])
-    {{
-        parent::__construct($attributes);
-
-        $Model = $this;
-        \Event::listen('Illuminate\Database\Events\Transaction*', function () use ($Model) {{
-            $Model->isSkipRevision = false;
-        }});
-    }}
-'''.format(table=table, key=properties['key'], model=name))
-
-            docs = '\n *\n * '.join(docs)
-            if docs:
-                docs = '\n * ' + docs + '\n *'
-
-            methods = ''.join(methods)
-
-            incrementing = 'true' if properties['autoincrement'] else 'false'
-
-            # fillable
-            fillable = ["        '%s'" % column for column in properties['fillable']]
-            fillable = ',\n'.join(fillable)
-            if fillable:
-                fillable = '\n' + fillable + '\n    '
-
-            # dates
-            dates = ["        '%s'" % column for column in properties['date']]
-            dates = ',\n'.join(dates)
-            if dates:
-                dates = '\n' + dates + '\n    '
-
-            # casts
-            n = 0
-            for column in properties['column']:
-                if column in ['passwd']:
-                    hidden.append("        '%s'" % column)
-
-                if column in properties['date']:
-                    continue
-
-                if n < len(column):
-                    n = len(column)
-
-            casts = []
-            for column, type_ in properties['column'].items():
-                if column in properties['date']:
-                    continue
-
-                casts.append("        '{column}{pad}=> {type}'".format(
+                relations.append('@property-read %s $%s' % (ref_name, ref))
+                methods.append(template_one_to_one.format(
+                    ref=ref,
+                    namespace=namespace,
+                    model=ref_name,
                     column=column,
-                    pad=' ' * (n - len(column) + 1),
-                    type=type_,
+                    ref_column=ref_column
                 ))
 
-            hidden = ',\n'.join(hidden)
-            if hidden:
-                hidden = '\n' + hidden + '\n    '
+            else:
+                if column.startswith(key):
+                    prefix = column.replace(key, '')
+                    ref = camelize(ref_table + prefix)
+                else:
+                    ref = ref_name
 
-            casts = ',\n'.join(casts)
-            if casts:
-                casts = '\n' + casts + '\n    '
+                ref = plural(ref[0].lower() + ref[1:])
 
-            text = open(os.path.join(os.path.realpath(os.path.dirname(__file__)), 'template.txt')).read()
-            text = text.format(
+                relations.append('@property-read Collection|%s[] $%s' % (ref_name, ref))
+                methods.append(template_one_to_many.format(
+                    ref=ref,
+                    namespace=namespace,
+                    model=ref_name,
+                    column=column,
+                    ref_column=ref_column
+                ))
+
+        for ref_table in properties['parent']:
+            ref_key = tables[ref_table]['key']
+            ref_name = tables[ref_table]['name']
+            column, ref_column = properties['parent'][ref_table]
+
+            if column.startswith(ref_key):
+                prefix = column.replace(ref_key, '')
+                ref = camelize(ref_table + prefix)
+            else:
+                ref = ref_name
+
+            ref = ref[0].lower() + ref[1:]
+
+            relations.append('@property-read %s $%s' % (ref_name, ref))
+            methods.append(template_many_to_one.format(
+                ref=ref,
                 namespace=namespace,
-                name=name,
-                docs=docs,
-                table=table,
-                key=properties['key'],
-                incrementing=incrementing,
-                hidden=hidden,
-                fillable=fillable,
-                dates=dates,
-                casts=casts,
-                methods=methods
-            )
+                model=ref_name,
+                column=column,
+                ref_column=ref_column
+            ))
 
-            f = path / (name + '.php')
-            f.write_text(text)
+        if props:
+            docs.append('\n * '.join(props))
+
+        if relations:
+            docs.append('\n * '.join(relations))
+
+        if wheres:
+            docs.append('\n * '.join(wheres))
+
+        docs = '\n *\n * '.join(docs)
+        fillable = ',\n'.join(fillable)
+        dates = ',\n'.join(dates)
+        hidden = ',\n'.join(hidden)
+        casts = ',\n'.join(casts)
+        methods = ''.join(methods)
+
+        if docs:
+            docs = '\n * %s\n *' % docs
+
+        if fillable:
+            fillable = '\n%s\n    ' % fillable
+
+        if dates:
+            dates = '\n%s\n    ' % dates
+
+        if hidden:
+            hidden = '\n%s\n    ' % hidden
+
+        if casts:
+            casts = '\n%s\n    ' % casts
+
+        f = path_model / (name + '.php')
+        f.write_text(template_model.format(
+            namespace=namespace,
+            name=name,
+            docs=docs,
+            table=table,
+            key=key,
+            incrementing=properties['autoincrement'],
+            hidden=hidden,
+            fillable=fillable,
+            dates=dates,
+            casts=casts,
+            methods=methods
+        ))
 
     _log.info('done')
+
 
 if __name__ == '__main__':
     main()
