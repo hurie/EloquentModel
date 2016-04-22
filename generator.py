@@ -4,6 +4,7 @@ Created on 4/20/2016
 @author: Azhar
 """
 import logging
+import os
 import re
 from collections import defaultdict, OrderedDict
 from contextlib import closing
@@ -370,94 +371,8 @@ WHERE {key} = :id', [
             if casts:
                 casts = '\n' + casts + '\n    '
 
-            text = '''\
-<?php
-
-namespace {namespace};
-
-use Eloquent;
-use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Database\Query\Builder;
-
-/**
- * {namespace}\{name}
- *{docs}
- * @method static Collection|{name}[]     all($columns = ['*'])
- * @method static Collection|{name}|null  find($id, $columns = ['*'])
- * @method static Collection|{name}       findOrNew($id, $columns = ['*'])
- * @method static Collection|{name}[]     findMany($ids, $columns = ['*'])
- * @method static Collection|{name}       findOrFail($id, $columns = ['*'])
- * @method static Collection|{name}|null  first($columns = ['*'])
- * @method static Collection|{name}       firstOrFail($columns = ['*'])
- * @method static Collection|{name}[]     get($columns = ['*'])
- */
-class {name} extends Eloquent
-{{
-
-    /**
-     * The table associated with the model.
-     *
-     * @var string
-     */
-    protected $table = '{table}';
-
-    /**
-     * The primary key for the model.
-     *
-     * @var string
-     */
-    protected $primaryKey = '{key}';
-
-    /**
-     * Indicates if the IDs are auto-incrementing.
-     *
-     * @var bool
-     */
-    public $incrementing = {incrementing};
-
-    /**
-     * Indicates if the model should be timestamped.
-     *
-     * @var bool
-     */
-    public $timestamps = false;
-
-    /**
-     * The attributes that should be hidden for arrays.
-     *
-     * @var array
-     */
-    protected $hidden = [{hidden}];
-
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array
-     */
-    protected $fillable = [{fillable}];
-
-    /**
-     * The attributes that aren't mass assignable.
-     *
-     * @var array
-     */
-    protected $guarded = [];
-
-    /**
-     * The attributes that should be mutated to dates.
-     *
-     * @var array
-     */
-    protected $dates = [{dates}];
-
-    /**
-     * The attributes that should be cast to native types.
-     *
-     * @var array
-     */
-    protected $casts = [{casts}];
-{methods}}}
-'''.format(
+            text = open(os.path.join(os.path.realpath(os.path.dirname(__file__)), 'template.txt')).read()
+            text = text.format(
                 namespace=namespace,
                 name=name,
                 docs=docs,
