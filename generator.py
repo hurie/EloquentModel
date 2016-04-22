@@ -217,6 +217,12 @@ def main():
         key = properties['key']
         name = properties['name']
 
+        use = [
+            'use Eloquent;',
+            'use Illuminate\Database\Eloquent\Collection;',
+            'use Illuminate\Database\Query\Builder;',
+        ]
+
         docs = []
         hidden = []
         methods = []
@@ -277,6 +283,7 @@ def main():
                     column=column,
                     ref_column=ref_column
                 ))
+                use.append('use Illuminate\Database\Eloquent\Relations\HasOne;')
 
             else:
                 if column.startswith(key):
@@ -295,6 +302,7 @@ def main():
                     column=column,
                     ref_column=ref_column
                 ))
+                use.append('use Illuminate\Database\Eloquent\Relations\HasMany;')
 
         for ref_table in properties['parent']:
             ref_key = tables[ref_table]['key']
@@ -317,6 +325,7 @@ def main():
                 column=column,
                 ref_column=ref_column
             ))
+            use.append('use Illuminate\Database\Eloquent\Relations\BelongsTo;')
 
         if props:
             docs.append('\n * '.join(props))
@@ -327,12 +336,16 @@ def main():
         if wheres:
             docs.append('\n * '.join(wheres))
 
+        use = '\n'.join(sorted(set(use)))
         docs = '\n *\n * '.join(docs)
         fillable = ',\n'.join(fillable)
         dates = ',\n'.join(dates)
         hidden = ',\n'.join(hidden)
         casts = ',\n'.join(casts)
         methods = ''.join(methods)
+
+        if use:
+            use += '\n'
 
         if docs:
             docs = '\n * %s\n *' % docs
@@ -352,6 +365,7 @@ def main():
         f = path_model / (name + '.php')
         f.write_text(template_model.format(
             namespace=namespace,
+            use=use,
             name=name,
             docs=docs,
             table=table,

@@ -1,6 +1,6 @@
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo|Builder
+     * @return BelongsTo|Builder
      */
     public function {ref}()
     {{

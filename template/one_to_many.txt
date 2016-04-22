@@ -1,6 +1,6 @@
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany|Builder
+     * @return HasMany|Builder
      */
     public function {ref}()
     {{

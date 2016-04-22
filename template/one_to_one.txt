@@ -1,6 +1,6 @@
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasOne|Builder
+     * @return HasOne|Builder
      */
     public function {ref}()
     {{
