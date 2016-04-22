@@ -280,10 +280,10 @@ def main(config=None):
         if table in table_consts:
             const = ''.join(['\n    ', '\n    '.join(table_consts[table]), '\n'])
 
-        max_length = 0
+        column_length = 0
         for column in properties['column']:
             if column not in properties['date']:
-                max_length = max(max_length, len(column))
+                column_length = max(column_length, len(column))
 
         for column, col_type in properties['column'].items():
             prop_type = col_type
@@ -302,7 +302,7 @@ def main(config=None):
             if column in properties['date']:
                 dates.append("        '%s'" % column)
             else:
-                casts.append("        '%s'%s => '%s'" % (column, ' ' * (max_length - len(column)), col_type))
+                casts.append("        '%s'%s => '%s'" % (column, ' ' * (column_length - len(column)), col_type))
 
         # relation
         for ref_table in properties['child']:
