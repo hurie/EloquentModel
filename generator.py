@@ -62,6 +62,13 @@ def main():
         'failed_jobs'
     ]
 
+    db = {
+        'user': 'root',
+        'password': 'root',
+        'host': '127.0.0.1',
+        'database': 'epkbdb',
+    }
+
     path = Path(r'D:\Users\Azhar\Projects\GPO-EPKB\models')
     _log.info('cleanup %s', path)
     for f in path.iterdir():
@@ -80,11 +87,7 @@ def main():
     })
 
     _log.info('connection')
-    with closing(connection.MySQLConnection(user='admsiap20',
-                                            password='$dm2siap',
-                                            host='172.17.1.23',
-                                            database='epkbdb')) as cnx:
-
+    with closing(connection.MySQLConnection(**db)) as cnx:
         _log.info('loading table definition')
         with closing(cnx.cursor()) as cursor:
             cursor.execute('''\
