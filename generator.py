@@ -59,6 +59,8 @@ type_map = {
     'year': integer_type,
 }
 
+title_trans = ''.join(chr(c) if chr(c).isalnum() else '_' for c in range(256))
+
 
 @lru_cache(maxsize=128)
 def camelize(text):
@@ -160,8 +162,29 @@ WHERE TABLE_SCHEMA = DATABASE()
             tables[ref_table]['child'][table] = (column, ref_column)
 
 
+def load_const(cnx, table, key, value):
+    with closing(cnx.cursor()) as cursor:
+        cursor.execute('''\
+SELECT {key}, {value}
+FROM {table}
+ORDER BY {value}
+'''.format(key=key, value=value, table=table))
 
+        max_length = 0
 
+        fields = {}
+        for k, v in cursor:
+            k = k.upper().translate(title_trans)
+            fields[k] = v
+
+            max_length = max(max_length, len(k))
+
+        result = []
+        for k in sorted(fields, key=lambda x: fields[x]):
+            pad = ' ' * (max_length - len(k))
+            result.append('const %s%s = %s;' % (k, pad, fields[k]))
+
+        return result
 
 
 def main(config=None):
@@ -179,6 +202,15 @@ def main(config=None):
     hidden_column = conf['hidden_column']
     history_suffix = conf['options']['history_table_suffix']
 
+    if 'constant_value' in conf:
+        const_field = conf['constant_value']['default_field']
+        extract_const = conf['constant_value']['tables']
+        extract_field = conf['constant_value']['alternate_field']
+    else:
+        const_field = ''
+        extract_const = {}
+        extract_field = {}
+
     path_model = Path(conf['options']['result_path'])
     path_template = local / 'template'
 
@@ -193,6 +225,8 @@ def main(config=None):
     template_many_to_one = (path_template / 'many_to_one.txt').read_text()
     template_model = (path_template / 'model.txt').read_text()
 
+    table_consts = {}
+
     _log.info('connection')
     with closing(connection.MySQLConnection(**db)) as cnx:
         _log.info('loading table definition')
@@ -200,6 +234,13 @@ def main(config=None):
 
         _log.info('loading table relation')
         load_relation(cnx, tables)
+
+        for table, value in extract_const.items():
+            if table not in tables:
+                continue
+
+            key = extract_field.get(table, const_field)
+            table_consts[table] = load_const(cnx, table, key, value)
 
     for table, properties in tables.items():
         if table in ignore:
@@ -217,6 +258,7 @@ def main(config=None):
         ]
 
         docs = []
+        const = ''
         hidden = []
         methods = []
         fillable = ["        '%s'" % column for column in properties['fillable']]
@@ -234,6 +276,9 @@ def main(config=None):
                 key=key,
                 model=name
             ))
+
+        if table in table_consts:
+            const = ''.join(['\n    ', '\n    '.join(table_consts[table]), '\n'])
 
         max_length = 0
         for column in properties['column']:
@@ -360,6 +405,7 @@ def main(config=None):
             namespace=namespace,
             use=use,
             name=name,
+            const=const,
             docs=docs,
             table=table,
             key=key,

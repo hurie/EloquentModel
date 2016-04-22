@@ -16,8 +16,7 @@ namespace {namespace};
  * @method static Collection|{name}[]     get($columns = ['*'])
  */
 class {name} extends Eloquent
-{{
-
+{{{const}
     /**
      * The table associated with the model.
      *
