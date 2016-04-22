@@ -14,7 +14,7 @@ SELECT NULL, CURRENT_TIMESTAMP(), {table}.*, :hid
 FROM {table}
 WHERE {key} = :id', [
             'hid' => $Akun ? $Akun->akun_id : null,
-            'id' => $this->{key},
+            'id'  => $this->{key},
         ]);
 
         $this->isSkipRevision = true;
