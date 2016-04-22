@@ -17,8 +17,8 @@ from mysql.connector import connection
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(process)d:%(name)s - %(levelname)s - %(message)s')
 _log = logging.getLogger(__name__)
 
-ns_mark = '/******* additional namespace *******/'
-udf_mark = '/******* user defined function *******/'
+namespace_mark = '### Additional namespace #'
+function_mark = '### User defined function #'
 
 default_type = 'mixed'
 datetime_type = '\Carbon\Carbon'
@@ -431,28 +431,35 @@ def main(config=None):
             for line in old_texts:
                 line_stripped = line.strip()
 
-                if line_stripped == ns_mark:
-                    is_namespace = True
-
-                elif line_stripped == udf_mark:
-                    is_function = True
-
-                elif line.startswith('class') and 'extends' in line_stripped:
+                if line.startswith('class') and 'extends' in line_stripped:
                     wait_trait = True
                     lines = line_stripped.split(' ')
                     if len(lines) > 4:
                         base += ' %s' % ' '.join(lines[4:])
 
-                elif is_namespace:
-                    if line_stripped:
-                        additional_ns.append(line)
-                    else:
-                        is_namespace = False
+                elif line_stripped.startswith('//region'):
+                    region = line_stripped.replace('//region', '').strip()
+                    regions.append(region)
 
-                elif is_function:
-                    if line == '}':
+                    if region == namespace_mark:
+                        is_namespace = True
+                    elif region == function_mark:
+                        is_function = True
+                    elif is_namespace:
+                        additional_ns.append(line)
+                    elif is_function:
+                        additional_function.append(line)
+
+                elif line_stripped.startswith('//endregion'):
+                    region = regions.pop(-1)
+
+                    if region == namespace_mark:
+                        is_namespace = False
+                    elif region == function_mark:
                         is_function = False
-                    else:
+                    elif is_namespace:
+                        additional_ns.append(line)
+                    elif is_function:
                         additional_function.append(line)
 
                 elif wait_trait:
@@ -461,13 +468,19 @@ def main(config=None):
                     elif not line_stripped:
                         wait_trait = False
 
+                elif is_namespace:
+                    additional_ns.append(line)
+
+                elif is_function:
+                    additional_function.append(line)
+
             additional_ns = '\n'.join(additional_ns)
             if additional_ns:
-                use = '%s\n%s\n%s\n' % (use, ns_mark, additional_ns)
+                use = '%s\n//region %s\n%s\n//endregion\n' % (use, namespace_mark, additional_ns)
 
             additional_function = '\n'.join(additional_function)
             if additional_function:
-                methods = '%s\n    %s\n%s\n' % (methods, udf_mark, additional_function)
+                methods = '%s\n    //region %s\n%s\n    //endregion\n' % (methods, function_mark, additional_function)
 
         text = template_model.format(
             namespace=namespace,
