@@ -3,6 +3,7 @@ Created on 4/20/2016
 
 @author: Azhar
 """
+import json
 import logging
 import os
 import re
@@ -159,35 +160,27 @@ WHERE TABLE_SCHEMA = DATABASE()
             tables[ref_table]['child'][table] = (column, ref_column)
 
 
-def main():
-    namespace = r'App\Models'
 
-    ignore = [
-        'failed_jobs'
-    ]
 
-    hidden_column = [
-        'passwd'
-    ]
 
-    db = {
-        'user': 'root',
-        'password': 'root',
-        'host': '127.0.0.1',
-        'database': 'epkbdb',
-    }
 
-    # db = {
-    #     'user': 'admsiap20',
-    #     'password': '$dm2siap',
-    #     'host': '172.17.1.23',
-    #     'database': 'epkbdb',
-    # }
+def main(config=None):
+    local = Path(os.path.realpath(os.path.dirname(__file__)))
 
-    history_suffix = '_salah'
+    conf = local / ('generator.conf.json' if config is None else config)
+    if not conf.exists():
+        raise Exception('Unable to load configuration %s', conf)
 
-    path_model = Path(r'D:\Users\Azhar\Projects\GPO-EPKB\models')
-    path_template = Path(os.path.realpath(os.path.dirname(__file__))) / 'template'
+    conf = json.loads(conf.read_text())
+
+    db = conf['db']
+    namespace = conf['options']['namespace']
+    ignore = conf['ignore']
+    hidden_column = conf['hidden_column']
+    history_suffix = conf['options']['history_table_suffix']
+
+    path_model = Path(conf['options']['result_path'])
+    path_template = local / 'template'
 
     _log.info('cleanup %s', path_model)
     for f in path_model.iterdir():
