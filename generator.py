@@ -17,6 +17,9 @@ from mysql.connector import connection
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(process)d:%(name)s - %(levelname)s - %(message)s')
 _log = logging.getLogger(__name__)
 
+ns_mark = '/******* additional namespace *******/'
+udf_mark = '/******* user defined function *******/'
+
 default_type = 'mixed'
 datetime_type = '\Carbon\Carbon'
 string_type = 'string'
@@ -212,6 +215,7 @@ def main(config=None):
         extract_const = {}
         extract_field = {}
 
+    path_ref = Path(conf['options']['reference_path'])
     path_model = Path(conf['options']['result_path'])
     path_template = local / 'template'
 
@@ -411,24 +415,80 @@ def main(config=None):
         if casts:
             casts = '\n%s,\n    ' % casts
 
+        base = base_class
+
+        f = path_ref / (name + '.php')
+        if f.exists():
+            is_namespace = False
+            is_function = False
+
+            wait_trait = False
+
+            additional_ns = []
+            additional_function = []
+
+            old_texts = f.read_text().splitlines()
+            for line in old_texts:
+                line_stripped = line.strip()
+
+                if line_stripped == ns_mark:
+                    is_namespace = True
+
+                elif line_stripped == udf_mark:
+                    is_function = True
+
+                elif line.startswith('class') and 'extends' in line_stripped:
+                    wait_trait = True
+                    lines = line_stripped.split(' ')
+                    if len(lines) > 4:
+                        base += ' %s' % ' '.join(lines[4:])
+
+                elif is_namespace:
+                    if line_stripped:
+                        additional_ns.append(line)
+                    else:
+                        is_namespace = False
+
+                elif is_function:
+                    if line == '}':
+                        is_function = False
+                    else:
+                        additional_function.append(line)
+
+                elif wait_trait:
+                    if line_stripped.startswith('use'):
+                        const = '\n%s\n%s' % (line, const)
+                    elif not line_stripped:
+                        wait_trait = False
+
+            additional_ns = '\n'.join(additional_ns)
+            if additional_ns:
+                use = '%s\n%s\n%s\n' % (use, ns_mark, additional_ns)
+
+            additional_function = '\n'.join(additional_function)
+            if additional_function:
+                methods = '%s\n    %s\n%s\n' % (methods, udf_mark, additional_function)
+
+        text = template_model.format(
+            namespace=namespace,
+            use=use,
+            name=name,
+            const=const,
+            docs=docs,
+            base=base,
+            table=table,
+            key=key,
+            incrementing=properties['autoincrement'],
+            hidden=hidden,
+            fillable=fillable,
+            dates=dates,
+            casts=casts,
+            methods=methods
+        )
+
         f = path_model / (name + '.php')
         with f.open(mode='w', newline='\n') as f:
-            f.write(template_model.format(
-                namespace=namespace,
-                use=use,
-                name=name,
-                const=const,
-                docs=docs,
-                base=base_class,
-                table=table,
-                key=key,
-                incrementing=properties['autoincrement'],
-                hidden=hidden,
-                fillable=fillable,
-                dates=dates,
-                casts=casts,
-                methods=methods
-            ))
+            f.write(text)
 
     _log.info('done')
 
