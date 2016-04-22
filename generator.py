@@ -281,6 +281,8 @@ def main(config=None):
             const = ''.join(['\n    ', '\n    '.join(table_consts[table]), '\n'])
 
         column_length = 0
+        type_length = 0
+
         for column in properties['column']:
             if column not in properties['date']:
                 column_length = max(column_length, len(column))
@@ -291,11 +293,12 @@ def main(config=None):
 
             if column in properties['null']:
                 prop_type = 'null|' + prop_type
+            type_length = max(type_length, len(prop_type))
 
             if column in hidden_column:
                 hidden.append("        '%s'" % column)
 
-            props.append('@property %s $%s' % (prop_type, column))
+            props.append((prop_type, column))
 
             wheres.append('@method static Builder|%s where%s($value)' % (name, method))
 
@@ -312,8 +315,9 @@ def main(config=None):
 
             if column == ref_key:
                 ref = ref_name[0].lower() + ref_name[1:]
+                type_length = max(type_length, len(ref_name) + 5)
 
-                relations.append('@property-read %s $%s' % (ref_name, ref))
+                relations.append((ref_name, ref))
                 methods.append(template_one_to_one.format(
                     ref=ref,
                     namespace=namespace,
@@ -331,8 +335,9 @@ def main(config=None):
                     ref = ref_name
 
                 ref = plural(ref[0].lower() + ref[1:])
+                type_length = max(type_length, len(ref_name) + 13 + 5)
 
-                relations.append('@property-read Collection|%s[] $%s' % (ref_name, ref))
+                relations.append(('Collection|%s[]' % ref_name, ref))
                 methods.append(template_one_to_many.format(
                     ref=ref,
                     namespace=namespace,
@@ -354,8 +359,9 @@ def main(config=None):
                 ref = ref_name
 
             ref = ref[0].lower() + ref[1:]
+            type_length = max(type_length, len(ref_name) + 5)
 
-            relations.append('@property-read %s $%s' % (ref_name, ref))
+            relations.append((ref_name, ref))
             methods.append(template_many_to_one.format(
                 ref=ref,
                 namespace=namespace,
@@ -366,9 +372,13 @@ def main(config=None):
             use.append('use Illuminate\Database\Eloquent\Relations\BelongsTo;')
 
         if props:
+            props = ['@property %s%s $%s' % (prop_type, ' ' * (type_length - len(prop_type)), column) for
+                     prop_type, column in props]
             docs.append('\n * '.join(props))
 
         if relations:
+            relations = ['@property-read %s%s $%s' % (ref_name, ' ' * (type_length - len(ref_name) - 5), ref) for
+                         ref_name, ref in relations]
             docs.append('\n * '.join(relations))
 
         if wheres:
