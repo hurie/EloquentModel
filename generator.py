@@ -201,6 +201,7 @@ def main(config=None):
     ignore = conf['ignore']
     hidden_column = conf['hidden_column']
     history_suffix = conf['options']['history_table_suffix']
+    base_class = conf['options']['base_class']
 
     if 'constant_value' in conf:
         const_field = conf['constant_value']['default_field']
@@ -418,6 +419,7 @@ def main(config=None):
                 name=name,
                 const=const,
                 docs=docs,
+                base=base_class,
                 table=table,
                 key=key,
                 incrementing=properties['autoincrement'],

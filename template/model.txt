@@ -15,7 +15,7 @@ namespace {namespace};
  * @method static Collection|{name}       firstOrFail($columns = ['*'])
  * @method static Collection|{name}[]     get($columns = ['*'])
  */
-class {name} extends Eloquent
+class {name} extends {base}
 {{{const}
     /**
      * The table associated with the model.
