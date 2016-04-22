@@ -411,21 +411,22 @@ def main(config=None):
             casts = '\n%s,\n    ' % casts
 
         f = path_model / (name + '.php')
-        f.write_text(template_model.format(
-            namespace=namespace,
-            use=use,
-            name=name,
-            const=const,
-            docs=docs,
-            table=table,
-            key=key,
-            incrementing=properties['autoincrement'],
-            hidden=hidden,
-            fillable=fillable,
-            dates=dates,
-            casts=casts,
-            methods=methods
-        ))
+        with f.open(mode='w', newline='\n') as f:
+            f.write(template_model.format(
+                namespace=namespace,
+                use=use,
+                name=name,
+                const=const,
+                docs=docs,
+                table=table,
+                key=key,
+                incrementing=properties['autoincrement'],
+                hidden=hidden,
+                fillable=fillable,
+                dates=dates,
+                casts=casts,
+                methods=methods
+            ))
 
     _log.info('done')
 
