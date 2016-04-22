@@ -399,16 +399,16 @@ def main(config=None):
             docs = '\n * %s\n *' % docs
 
         if fillable:
-            fillable = '\n%s\n    ' % fillable
+            fillable = '\n%s,\n    ' % fillable
 
         if dates:
-            dates = '\n%s\n    ' % dates
+            dates = '\n%s,\n    ' % dates
 
         if hidden:
-            hidden = '\n%s\n    ' % hidden
+            hidden = '\n%s,\n    ' % hidden
 
         if casts:
-            casts = '\n%s\n    ' % casts
+            casts = '\n%s,\n    ' % casts
 
         f = path_model / (name + '.php')
         f.write_text(template_model.format(
