@@ -420,10 +420,10 @@ def main(config=None):
         f = path_ref / (name + '.php')
         if f.exists():
             is_namespace = False
+            is_trait = False
             is_function = False
 
-            wait_trait = False
-
+            regions = []
             additional_ns = []
             additional_function = []
 
@@ -432,7 +432,7 @@ def main(config=None):
                 line_stripped = line.strip()
 
                 if line.startswith('class') and 'extends' in line_stripped:
-                    wait_trait = True
+                    is_trait = True
                     lines = line_stripped.split(' ')
                     if len(lines) > 4:
                         base += ' %s' % ' '.join(lines[4:])
@@ -462,11 +462,11 @@ def main(config=None):
                     elif is_function:
                         additional_function.append(line)
 
-                elif wait_trait:
+                elif is_trait:
                     if line_stripped.startswith('use'):
                         const = '\n%s\n%s' % (line, const)
                     elif not line_stripped:
-                        wait_trait = False
+                        is_trait = False
 
                 elif is_namespace:
                     additional_ns.append(line)
