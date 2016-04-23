@@ -193,6 +193,7 @@ ORDER BY {value}
 def main(config=None):
     local = Path(os.path.realpath(os.path.dirname(__file__)))
 
+    # load configuration
     confing = local / ('generator.ini' if config is None else config)
     if not confing.exists():
         raise Exception('Unable to load configuration %s', confing)
@@ -234,6 +235,8 @@ def main(config=None):
 
     table_consts = {}
 
+    # open connection to database then load table definition, load tabel relation and
+    # value constant if specified
     _log.info('connection')
     with closing(connection.MySQLConnection(**db)) as cnx:
         _log.info('loading table definition')
@@ -270,11 +273,11 @@ def main(config=None):
         dates = []
         casts = []
 
-        # property
         props = []
         wheres = []
         relations = []
 
+        # add history related method if table history exists
         if (table + history_suffix) in tables:
             methods.append(template_history.format(
                 table=table,
