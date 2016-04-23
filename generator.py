@@ -243,11 +243,9 @@ def main(config=None):
         load_relation(cnx, tables)
 
         for table, value in extract_const.items():
-            if table not in tables:
-                continue
-
-            key = extract_field.get(table, const_field)
-            table_consts[table] = load_const(cnx, table, key, value)
+            if table in tables:
+                key = extract_field.get(table, const_field)
+                table_consts[table] = load_const(cnx, table, key, value)
 
     for table, properties in tables.items():
         if table in ignore:
