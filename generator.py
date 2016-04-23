@@ -3,11 +3,11 @@ Created on 4/20/2016
 
 @author: Azhar
 """
-import json
 import logging
 import os
 import re
 from collections import defaultdict, OrderedDict
+from configparser import ConfigParser
 from contextlib import closing
 from functools import lru_cache
 from pathlib import Path
@@ -193,23 +193,25 @@ ORDER BY {value}
 def main(config=None):
     local = Path(os.path.realpath(os.path.dirname(__file__)))
 
-    conf = local / ('generator.conf.json' if config is None else config)
-    if not conf.exists():
-        raise Exception('Unable to load configuration %s', conf)
+    confing = local / ('generator.ini' if config is None else config)
+    if not confing.exists():
+        raise Exception('Unable to load configuration %s', confing)
 
-    conf = json.loads(conf.read_text())
+    conf = ConfigParser()
+    conf.read_file(confing.open())
 
     db = conf['db']
+
     namespace = conf['options']['namespace']
-    ignore = conf['ignore']
-    hidden_column = conf['hidden_column']
+    ignore = [x for x in map(str.strip, conf['options']['ignored_table'].splitlines()) if x]
+    hidden_column = [x for x in map(str.strip, conf['options']['hidden_column'].splitlines()) if x]
     history_suffix = conf['options']['history_table_suffix']
     base_class = conf['options']['base_class']
 
-    if 'constant_value' in conf:
-        const_field = conf['constant_value']['default_field']
-        extract_const = conf['constant_value']['tables']
-        extract_field = conf['constant_value']['alternate_field']
+    if 'constant' in conf:
+        const_field = conf['constant']['default_value_column']
+        extract_const = conf['constant/key_column']
+        extract_field = conf['constant/value_column']
     else:
         const_field = ''
         extract_const = {}
