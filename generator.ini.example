@@ -1,0 +1,31 @@
+[options]
+namespace: App\Models
+base_class: Eloquent
+history_table_suffix: _history
+result_path: /home/user/projects/models/laravel-app
+reference_path: /home/user/projects/laravel-app/app/Models
+
+ignored_table:
+  ignored_table_1
+  ignored_table_2
+
+hidden_column:
+  secret_column_1
+  secret_column_2
+
+[db]
+user: root
+password: root
+host: 127.0.0.1
+database: appdb
+
+[constant]
+default_value_column: content
+
+[constant/key_column]
+master_1: id
+master_2: id
+master_3: id
+
+[constant/value_column]
+master_2: summary
