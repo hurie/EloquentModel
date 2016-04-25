@@ -20,7 +20,10 @@ host: 127.0.0.1
 database: appdb
 
 [constant]
-default_value_column: content
+default_value_column:
+  content_field
+  content_field_alt_1
+  content_field_alt_2
 
 [constant/key_column]
 master_1: id

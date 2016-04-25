@@ -165,7 +165,8 @@ WHERE TABLE_SCHEMA = DATABASE()
             tables[ref_table]['child'][table] = (column, ref_column)
 
 
-def load_const(cnx, table, key, value):
+def load_const(cnx, table, keys, value):
+    key = ', '.join(keys)
     with closing(cnx.cursor()) as cursor:
         cursor.execute('''\
 SELECT {key}, {value}
@@ -176,7 +177,15 @@ ORDER BY {value}
         max_length = 0
 
         fields = {}
-        for k, v in cursor:
+        for r in cursor:
+            k = None
+            for c in r[:-1]:
+                if c is not None:
+                    k = c
+                    break
+
+            v = r[-1]
+
             k = k.upper().translate(title_trans)
             fields[k] = v
 
@@ -210,11 +219,11 @@ def main(config=None):
     base_class = conf['options']['base_class']
 
     if 'constant' in conf:
-        const_field = conf['constant']['default_value_column']
+        const_fields = [x for x in map(str.strip, conf['constant']['default_value_column'].splitlines()) if x]
         extract_const = conf['constant/key_column']
         extract_field = conf['constant/value_column']
     else:
-        const_field = ''
+        const_fields = []
         extract_const = {}
         extract_field = {}
 
@@ -247,8 +256,11 @@ def main(config=None):
 
         for table, value in extract_const.items():
             if table in tables:
-                key = extract_field.get(table, const_field)
-                table_consts[table] = load_const(cnx, table, key, value)
+                if table in extract_field:
+                    keys = [extract_field[table]]
+                else:
+                    keys = const_fields
+                table_consts[table] = load_const(cnx, table, keys, value)
 
     for table, properties in tables.items():
         if table in ignore:
