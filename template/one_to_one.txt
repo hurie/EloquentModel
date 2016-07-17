@@ -1,6 +1,6 @@
 
     /**
-     * @return HasOne|Builder
+     * @return HasOne|Builder|{model}
      */
     public function {ref}()
     {{

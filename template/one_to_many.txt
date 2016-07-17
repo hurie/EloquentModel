@@ -1,6 +1,6 @@
 
     /**
-     * @return HasMany|Builder
+     * @return HasMany|Builder|{model}[]
      */
     public function {ref}()
     {{

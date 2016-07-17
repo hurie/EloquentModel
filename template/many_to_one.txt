@@ -1,6 +1,6 @@
 
     /**
-     * @return BelongsTo|Builder
+     * @return BelongsTo|Builder|{model}
      */
     public function {ref}()
     {{
