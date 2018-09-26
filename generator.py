@@ -108,6 +108,7 @@ def table_definition(cnx):
         'class': None,
         'key': 'id',
         'autoincrement': 'false',
+        'timestamps': 'false',
         'column': OrderedDict(),
         'fillable': [],
         'date': [],
@@ -138,6 +139,8 @@ WHERE TABLE_SCHEMA = DATABASE()
 
             if column not in ['id', 'created_at', 'updated_at', 'deleted_at']:
                 properties['fillable'].append(column)
+            elif column in ['created_at', 'updated_at']:
+                properties['timestamps'] = 'true'
 
             type_ = column_type.get(column)
             if type_ is None:
@@ -513,6 +516,7 @@ def main(config=None):
             table=table,
             key=key,
             incrementing=properties['autoincrement'],
+            timestamps=properties['timestamps'],
             hidden=hidden,
             fillable=fillable,
             dates=dates,
