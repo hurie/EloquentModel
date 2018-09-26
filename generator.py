@@ -161,8 +161,14 @@ WHERE TABLE_SCHEMA = DATABASE()
 ''')
 
         for table, column, ref_table, ref_column in cursor:
-            tables[table]['parent'][ref_table] = (column, ref_column)
-            tables[ref_table]['child'][table] = (column, ref_column)
+            if ref_table not in tables[table]['parent']:
+                tables[table]['parent'][ref_table] = OrderedDict()
+
+            if table not in tables[ref_table]['child']:
+                tables[ref_table]['child'][table] = OrderedDict()
+
+            tables[table]['parent'][ref_table][column] = ref_column
+            tables[ref_table]['child'][table][column] = ref_column
 
 
 def load_const(cnx, table, keys, value):
@@ -328,68 +334,68 @@ def main(config=None):
                 casts.append("        '%s'%s => '%s'" % (column, ' ' * (column_length - len(column)), col_type))
 
         # relation
-        for ref_table in properties['child']:
+        for ref_table, columns in properties['child'].items():
             ref_key = tables[ref_table]['key']
             ref_name = tables[ref_table]['name']
-            column, ref_column = properties['child'][ref_table]
 
-            if column == ref_key:
-                ref = ref_name[0].lower() + ref_name[1:]
-                type_length = max(type_length, len(ref_name) + 5)
+            for column, ref_column in columns.items():
+                if column == ref_key:
+                    ref = ref_name[0].lower() + ref_name[1:]
+                    type_length = max(type_length, len(ref_name) + 5)
 
-                relations.append((ref_name, ref))
-                methods.append(template_one_to_one.format(
-                    ref=ref,
-                    namespace=namespace,
-                    model=ref_name,
-                    column=column,
-                    ref_column=ref_column
-                ))
-                use.append('use Illuminate\Database\Eloquent\Relations\HasOne;')
+                    relations.append((ref_name, ref))
+                    methods.append(template_one_to_one.format(
+                        ref=ref,
+                        namespace=namespace,
+                        model=ref_name,
+                        column=column,
+                        ref_column=ref_column
+                    ))
+                    use.append('use Illuminate\Database\Eloquent\Relations\HasOne;')
 
-            else:
-                if column.startswith(key):
-                    prefix = column.replace(key, '')
+                else:
+                    if column.startswith(key):
+                        prefix = column.replace(key, '')
+                        ref = camelize(ref_table + prefix)
+                    else:
+                        ref = ref_name
+
+                    ref = plural(ref[0].lower() + ref[1:])
+                    type_length = max(type_length, len(ref_name) + 13 + 5)
+
+                    relations.append(('Collection|%s[]' % ref_name, ref))
+                    methods.append(template_one_to_many.format(
+                        ref=ref,
+                        namespace=namespace,
+                        model=ref_name,
+                        column=column,
+                        ref_column=ref_column
+                    ))
+                    use.append('use Illuminate\Database\Eloquent\Relations\HasMany;')
+
+        for ref_table, columns in properties['parent'].items():
+            ref_key = tables[ref_table]['key']
+            ref_name = tables[ref_table]['name']
+
+            for column, ref_column in columns.items():
+                if column.startswith(ref_key):
+                    prefix = column.replace(ref_key, '')
                     ref = camelize(ref_table + prefix)
                 else:
                     ref = ref_name
 
-                ref = plural(ref[0].lower() + ref[1:])
-                type_length = max(type_length, len(ref_name) + 13 + 5)
+                ref = ref[0].lower() + ref[1:]
+                type_length = max(type_length, len(ref_name) + 5)
 
-                relations.append(('Collection|%s[]' % ref_name, ref))
-                methods.append(template_one_to_many.format(
+                relations.append((ref_name, ref))
+                methods.append(template_many_to_one.format(
                     ref=ref,
                     namespace=namespace,
                     model=ref_name,
                     column=column,
                     ref_column=ref_column
                 ))
-                use.append('use Illuminate\Database\Eloquent\Relations\HasMany;')
-
-        for ref_table in properties['parent']:
-            ref_key = tables[ref_table]['key']
-            ref_name = tables[ref_table]['name']
-            column, ref_column = properties['parent'][ref_table]
-
-            if column.startswith(ref_key):
-                prefix = column.replace(ref_key, '')
-                ref = camelize(ref_table + prefix)
-            else:
-                ref = ref_name
-
-            ref = ref[0].lower() + ref[1:]
-            type_length = max(type_length, len(ref_name) + 5)
-
-            relations.append((ref_name, ref))
-            methods.append(template_many_to_one.format(
-                ref=ref,
-                namespace=namespace,
-                model=ref_name,
-                column=column,
-                ref_column=ref_column
-            ))
-            use.append('use Illuminate\Database\Eloquent\Relations\BelongsTo;')
+                use.append('use Illuminate\Database\Eloquent\Relations\BelongsTo;')
 
         if props:
             props = ['@property %s%s $%s' % (prop_type, ' ' * (type_length - len(prop_type)), column) for
