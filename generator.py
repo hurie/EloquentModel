@@ -6,6 +6,7 @@ Created on 4/20/2016
 import logging
 import os
 import re
+import sys
 from collections import defaultdict, OrderedDict
 from configparser import ConfigParser
 from contextlib import closing
@@ -532,4 +533,4 @@ def main(config=None):
 
 
 if __name__ == '__main__':
-    main()
+    main(sys.argv[1] if len(sys.argv) > 1 else None)
