@@ -7,12 +7,15 @@ namespace {namespace};
  * {namespace}\{name}
  *{docs}
  * @method static Collection|{name}[]     all($columns = ['*'])
- * @method static Collection|{name}|null  find($id, $columns = ['*'])
- * @method static Collection|{name}       findOrNew($id, $columns = ['*'])
+ * @method static {name}|null             find($id, $columns = ['*'])
  * @method static Collection|{name}[]     findMany($ids, $columns = ['*'])
- * @method static Collection|{name}       findOrFail($id, $columns = ['*'])
- * @method static Collection|{name}|null  first($columns = ['*'])
- * @method static Collection|{name}       firstOrFail($columns = ['*'])
+ * @method static {name}                  findOrNew($id, $columns = ['*'])
+ * @method static {name}                  findOrFail($id, $columns = ['*'])
+ * @method static {name}|null             first($columns = ['*'])
+ * @method static {name}                  firstOrFail($columns = ['*'])
+ * @method static {name}                  firstOrNew($attributes, $values = array())
+ * @method static {name}                  firstOrCreate($attributes, $values = ['*'])
+ * @method static {name}                  updateOrCreate($attributes, $values = ['*'])
  * @method static Collection|{name}[]     get($columns = ['*'])
  */
 class {name} extends {base}
@@ -43,7 +46,7 @@ class {name} extends {base}
      *
      * @var bool
      */
-    public $timestamps = false;
+    public $timestamps = {timestamps};
 
     /**
      * The attributes that should be hidden for arrays.
