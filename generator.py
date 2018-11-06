@@ -308,7 +308,7 @@ def main(config=None):
                 model=name
             ))
 
-        if table in table_consts:
+        if table in table_consts and table_consts[table]:
             const = ''.join(['\n    ', '\n    '.join(table_consts[table]), '\n'])
 
         column_length = 0
