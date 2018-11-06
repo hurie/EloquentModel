@@ -198,6 +198,10 @@ ORDER BY {value}
             v = r[-1]
 
             k = k.upper().translate(title_trans)
+            k0 = None
+            while k0 != k:
+                k0, k = k, k.replace('__', '_')
+
             fields[k] = v
 
             max_length = max(max_length, len(k))
