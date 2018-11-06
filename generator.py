@@ -188,11 +188,12 @@ ORDER BY {value}
 
         fields = {}
         for r in cursor:
-            k = None
             for c in r[:-1]:
-                if c is not None:
+                if isinstance(c, str) and c != '':
                     k = c
                     break
+            else:
+                continue
 
             v = r[-1]
 
