@@ -421,6 +421,9 @@ def main(config=None):
         if wheres:
             docs.append('\n * '.join(wheres))
 
+        if 'deleted_at' in properties['column']:
+            use.append('use Illuminate\Database\Eloquent\SoftDeletes;')
+
         use = '\n'.join(sorted(set(use)))
         docs = '\n *\n * '.join(docs)
         fillable = ',\n'.join(fillable)
@@ -513,6 +516,12 @@ def main(config=None):
             additional_function = '\n'.join(additional_function)
             if additional_function:
                 methods = '%s\n    //region %s\n%s\n    //endregion\n' % (methods, function_mark, additional_function)
+
+        if 'deleted_at' in properties['column'] and 'SoftDeletes' not in const:
+            if const:
+                const = '    use SoftDeletes;\n%s' % const
+            else:
+                const = '    use SoftDeletes;'
 
         text = template_model.format(
             namespace=namespace,
