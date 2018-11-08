@@ -277,10 +277,10 @@ def main(config=None):
     path_ref = conf['options'].get('reference_path')
     path_template = local / 'template'
 
-    _log.info('cleanup %s', path_model)
+    existing_models = []
     for f in path_model.iterdir():
         if f.is_file():
-            f.unlink()
+            existing_models.append(f)
 
     template_history = (path_template / 'history.txt').read_text()
     template_one_to_one = (path_template / 'one_to_one.txt').read_text()
@@ -576,8 +576,16 @@ def main(config=None):
         )
 
         f = path_model / (name + '.php')
-        with f.open(mode='w', newline='\n') as f:
-            f.write(text)
+        if f in existing_models:
+            existing_models.remove(f)
+            if f.read_text() == text:
+                continue
+
+        f.write_text(text)
+
+    _log.info('cleanup %s', path_model)
+    for f in existing_models:
+        f.unlink()
 
     _log.info('done')
 
