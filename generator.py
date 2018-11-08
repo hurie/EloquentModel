@@ -10,6 +10,7 @@ import sys
 from collections import defaultdict, OrderedDict
 from configparser import ConfigParser
 from contextlib import closing
+from fnmatch import fnmatch
 from functools import lru_cache
 from pathlib import Path
 
@@ -274,6 +275,15 @@ def main(config=None):
         extract_const = {}
         extract_field = {}
 
+    casts_fields = defaultdict(dict)
+    if conf.has_section('cast'):
+        for key, value in conf.items('cast'):
+            if '\\' in key:
+                table, column = key.split('\\')
+                casts_fields[table][column] = value
+            else:
+                casts_fields[None][key] = value
+
     path_ref = conf['options'].get('reference_path')
     path_template = local / 'template'
 
@@ -368,10 +378,20 @@ def main(config=None):
 
             wheres.append('@method static Builder|%s where%s($value)' % (name, method))
 
-            if column in properties['date']:
-                dates.append("        '%s'" % column)
-            elif column not in ['created_at', 'updated_at']:
-                casts.append("        '%s'%s => '%s'" % (column, ' ' * (column_length - len(column)), col_type))
+            casts_field = casts_fields.get(None, {})
+            if table in casts_fields:
+                casts_field = casts_field.copy()
+                casts_field.update(casts_fields[table])
+
+            for pat, cast in casts_field.items():
+                if fnmatch(column, pat):
+                    casts.append("        '%s'%s => '%s'" % (column, ' ' * (column_length - len(column)), cast))
+                    break
+            else:
+                if column in properties['date']:
+                    dates.append("        '%s'" % column)
+                elif column not in ['created_at', 'updated_at']:
+                    casts.append("        '%s'%s => '%s'" % (column, ' ' * (column_length - len(column)), col_type))
 
         # relation
         for ref_table, columns in properties['child'].items():
