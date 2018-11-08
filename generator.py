@@ -227,6 +227,9 @@ def main(config=None):
     conf = ConfigParser()
     conf.read_file(config.open())
 
+    if not conf.has_section('options') and conf['options'].get('result_path') is None:
+        raise Exception('result_path is undefined')
+
     path_model = Path(conf['options']['result_path'])
 
     if not path_model.exists():
@@ -237,11 +240,10 @@ def main(config=None):
 
     db = conf['db']
 
-    namespace = conf['options']['namespace']
-    ignore = [x for x in map(str.strip, conf['options']['ignored_table'].splitlines()) if x]
-    hidden_column = [x for x in map(str.strip, conf['options']['hidden_column'].splitlines()) if x]
-    history_suffix = conf['options']['history_table_suffix']
-    base_class = conf['options']['base_class']
+    namespace = conf['options'].get('namespace', 'App')
+    ignore = [x for x in map(str.strip, conf['options'].get('ignored_table', []).splitlines()) if x]
+    hidden_column = [x for x in map(str.strip, conf['options'].get('hidden_column', []).splitlines()) if x]
+    history_suffix = conf['options'].get('history_table_suffix')
 
     base_class = base_namespace = conf.get('options', 'base_class', fallback='Eloquent')
     if ' as ' in base_class:
@@ -271,7 +273,7 @@ def main(config=None):
         extract_const = {}
         extract_field = {}
 
-    path_ref = Path(conf['options']['reference_path'])
+    path_ref = conf['options'].get('reference_path')
     path_template = local / 'template'
 
     _log.info('cleanup %s', path_model)
@@ -333,7 +335,7 @@ def main(config=None):
         relations = []
 
         # add history related method if table history exists
-        if (table + history_suffix) in tables:
+        if history_suffix and (table + history_suffix) in tables:
             methods.append(template_history.format(
                 table=table,
                 key=key,
@@ -483,8 +485,8 @@ def main(config=None):
         if casts:
             casts = '\n%s,\n    ' % casts
 
-        f = path_ref / (name + '.php')
-        if f.exists():
+        f = None if path_ref is None else (Path(path_ref) / (name + '.php'))
+        if f is not None and f.exists():
             is_namespace = False
             is_trait = False
             is_function = False
