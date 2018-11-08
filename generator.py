@@ -227,6 +227,14 @@ def main(config=None):
     conf = ConfigParser()
     conf.read_file(config.open())
 
+    path_model = Path(conf['options']['result_path'])
+
+    if not path_model.exists():
+        path_model.mkdir(parents=True)
+
+    elif not path_model.is_dir():
+        raise Exception('Unable to use "%s" as path_model', path_model)
+
     db = conf['db']
 
     namespace = conf['options']['namespace']
@@ -264,7 +272,6 @@ def main(config=None):
         extract_field = {}
 
     path_ref = Path(conf['options']['reference_path'])
-    path_model = Path(conf['options']['result_path'])
     path_template = local / 'template'
 
     _log.info('cleanup %s', path_model)
