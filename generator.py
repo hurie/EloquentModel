@@ -148,7 +148,7 @@ WHERE TABLE_SCHEMA = DATABASE()
                 type_ = type_map.get(col_type, default_type)
                 if type_ == datetime_type:
                     properties['date'].append(column)
-            elif column in ['created_at', 'updated_at', 'deleted_at']:
+            elif column in ['deleted_at']:
                 properties['date'].append(column)
 
             properties['column'][column] = type_
@@ -369,7 +369,7 @@ def main(config=None):
 
             if column in properties['date']:
                 dates.append("        '%s'" % column)
-            else:
+            elif column not in ['created_at', 'updated_at']:
                 casts.append("        '%s'%s => '%s'" % (column, ' ' * (column_length - len(column)), col_type))
 
         # relation
