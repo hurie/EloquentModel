@@ -220,12 +220,12 @@ def main(config=None):
     local = Path(os.path.realpath(os.path.dirname(__file__)))
 
     # load configuration
-    confing = local / ('generator.ini' if config is None else config)
-    if not confing.exists():
-        raise Exception('Unable to load configuration %s', confing)
+    config = local / ('generator.ini' if config is None else config)
+    if not config.exists():
+        raise Exception('Unable to load configuration %s', config)
 
     conf = ConfigParser()
-    conf.read_file(confing.open())
+    conf.read_file(config.open())
 
     db = conf['db']
 
