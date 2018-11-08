@@ -22,7 +22,7 @@ namespace_mark = '### Additional namespace #'
 function_mark = '### User defined function #'
 
 default_type = 'mixed'
-datetime_type = '\Carbon\Carbon'
+datetime_type = 'datetime'
 string_type = 'string'
 integer_type = 'integer'
 boolean_type = 'boolean'
@@ -353,7 +353,7 @@ def main(config=None):
                 column_length = max(column_length, len(column))
 
         for column, col_type in properties['column'].items():
-            prop_type = col_type
+            prop_type = '\Carbon\Carbon' if col_type == datetime_type else col_type
             method = camelize(column)
 
             if column in properties['null']:
