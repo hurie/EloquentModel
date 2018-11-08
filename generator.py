@@ -235,6 +235,25 @@ def main(config=None):
     history_suffix = conf['options']['history_table_suffix']
     base_class = conf['options']['base_class']
 
+    base_class = base_namespace = conf.get('options', 'base_class', fallback='Eloquent')
+    if ' as ' in base_class:
+        base_class, base_namespace = base_class.split(' as ')
+    else:
+        base_class = base_class.split('\\')[-1]
+
+    base_class.strip()
+    base_namespace.strip()
+
+    base_classes = {}
+    if conf.has_section('base'):
+        for name, value in conf.items('base'):
+            if ' as ' in value:
+                base = value.split(' as ')[1].strip()
+            else:
+                base = value.split('\\')[-1].strip()
+
+            base_classes[name] = (base, value)
+
     if 'constant' in conf:
         const_fields = [x for x in map(str.strip, conf['constant']['default_value_column'].splitlines()) if x]
         extract_const = conf['constant/key_column']
@@ -289,7 +308,7 @@ def main(config=None):
         name = properties['name']
 
         use = [
-            'use Eloquent;',
+            'use %s;' % base_namespace,
             'use Illuminate\Database\Eloquent\Collection;',
             'use Illuminate\Database\Query\Builder;',
         ]
@@ -421,6 +440,13 @@ def main(config=None):
         if wheres:
             docs.append('\n * '.join(wheres))
 
+        if table in base_classes:
+            base, cls = base_classes[table]
+            use.append('use %s;' % cls)
+            use.remove('use %s;' % base_namespace)
+        else:
+            base = base_class
+
         if 'deleted_at' in properties['column']:
             use.append('use Illuminate\Database\Eloquent\SoftDeletes;')
 
@@ -449,8 +475,6 @@ def main(config=None):
 
         if casts:
             casts = '\n%s,\n    ' % casts
-
-        base = base_class
 
         f = path_ref / (name + '.php')
         if f.exists():
