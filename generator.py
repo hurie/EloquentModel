@@ -22,6 +22,7 @@ namespace_mark = '### Additional namespace #'
 function_mark = '### User defined function #'
 
 default_type = 'mixed'
+date_type = 'date:Y-m-d'
 datetime_type = 'datetime'
 string_type = 'string'
 integer_type = 'integer'
@@ -40,7 +41,7 @@ type_map = {
     'bool': boolean_type,
     'boolean': boolean_type,
     'char': string_type,
-    'date': datetime_type,
+    'date': date_type,
     'datetime': datetime_type,
     'decimal': float_type,
     'double': float_type,
@@ -146,7 +147,7 @@ WHERE TABLE_SCHEMA = DATABASE()
             type_ = column_type.get(column)
             if type_ is None:
                 type_ = type_map.get(col_type, default_type)
-                if type_ == datetime_type:
+                if type_ in [datetime_type, date_type]:
                     properties['date'].append(column)
             elif column in ['deleted_at']:
                 properties['date'].append(column)
@@ -353,7 +354,7 @@ def main(config=None):
                 column_length = max(column_length, len(column))
 
         for column, col_type in properties['column'].items():
-            prop_type = '\Carbon\Carbon' if col_type == datetime_type else col_type
+            prop_type = '\Carbon\Carbon' if col_type in [date_type, datetime_type] else col_type
             method = camelize(column)
 
             if column in properties['null']:
