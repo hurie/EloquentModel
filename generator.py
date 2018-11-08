@@ -148,6 +148,8 @@ WHERE TABLE_SCHEMA = DATABASE()
                 type_ = type_map.get(col_type, default_type)
                 if type_ == datetime_type:
                     properties['date'].append(column)
+            elif column in ['created_at', 'updated_at', 'deleted_at']:
+                properties['date'].append(column)
 
             properties['column'][column] = type_
 
