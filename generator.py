@@ -506,6 +506,8 @@ def main(config=None):
         if casts:
             casts = '\n%s,\n    ' % casts
 
+        traits = []
+
         f = None if path_ref is None else (Path(path_ref) / (name + '.php'))
         if f is not None and f.exists():
             is_namespace = False
@@ -553,7 +555,7 @@ def main(config=None):
 
                 elif is_trait:
                     if line_stripped.startswith('use'):
-                        const = '\n%s\n%s' % (line, const)
+                        traits.append(line)
                     elif not line_stripped:
                         is_trait = False
 
@@ -570,6 +572,9 @@ def main(config=None):
             additional_function = '\n'.join(additional_function)
             if additional_function:
                 methods = '%s\n    //region %s\n%s\n    //endregion\n' % (methods, function_mark, additional_function)
+
+        if traits:
+            const = '\n%s\n%s' % ('\n'.join(traits), const)
 
         if 'deleted_at' in properties['column'] and 'SoftDeletes' not in const:
             if const:
