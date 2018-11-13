@@ -279,8 +279,8 @@ def main(config=None):
     casts_fields = defaultdict(dict)
     if conf.has_section('cast'):
         for key, value in conf.items('cast'):
-            if '\\' in key:
-                table, column = key.split('\\')
+            if '/' in key:
+                table, column = key.split('/')
                 casts_fields[table][column] = value
             else:
                 casts_fields[None][key] = value
