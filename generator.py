@@ -246,6 +246,7 @@ def main(config=None):
     ignore = [x for x in map(str.strip, conf['options'].get('ignored_table', []).splitlines()) if x]
     hidden_column = [x for x in map(str.strip, conf['options'].get('hidden_column', []).splitlines()) if x]
     history_suffix = conf['options'].get('history_table_suffix')
+    always_add_region = conf['options'].get('always_add_region', 'false').lower() in ['true', 'yes', 't', 'y', '1']
 
     base_class = base_namespace = conf.get('options', 'base_class', fallback='Eloquent')
     if ' as ' in base_class:
@@ -568,10 +569,14 @@ def main(config=None):
             additional_ns = '\n'.join(additional_ns)
             if additional_ns:
                 use = '%s\n//region %s\n%s\n//endregion\n' % (use, namespace_mark, additional_ns)
+            elif always_add_region:
+                use = '%s\n//region %s\n//endregion\n' % (use, namespace_mark)
 
             additional_function = '\n'.join(additional_function)
             if additional_function:
                 methods = '%s\n    //region %s\n%s\n    //endregion\n' % (methods, function_mark, additional_function)
+            elif always_add_region:
+                methods = '%s\n    //region %s\n    //endregion\n' % (methods, function_mark)
 
         if traits:
             const = '\n%s\n%s' % ('\n'.join(traits), const)
