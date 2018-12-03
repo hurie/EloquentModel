@@ -13,11 +13,20 @@ hidden_column:
   secret_column_1
   secret_column_2
 
+always_add_region: true
+
 [db]
 user: root
 password: root
 host: 127.0.0.1
 database: appdb
+
+[base]
+table_name: Illuminate\Foundation\Auth\User as Authenticatable
+
+[cast]
+field_*: date:Y-m-d
+table_name/field_name: json
 
 [constant]
 default_value_column:
