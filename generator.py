@@ -330,8 +330,8 @@ def main(config=None):
 
         use = [
             'use %s;' % base_namespace,
-            'use Illuminate\Database\Eloquent\Collection;',
-            'use Illuminate\Database\Query\Builder;',
+            'use Illuminate\\Database\\Eloquent\\Collection;',
+            'use Illuminate\\Database\\Query\\Builder;',
         ]
 
         docs = []
@@ -365,7 +365,7 @@ def main(config=None):
                 column_length = max(column_length, len(column))
 
         for column, col_type in properties['column'].items():
-            prop_type = '\Carbon\Carbon' if col_type in [date_type, datetime_type] else col_type
+            prop_type = '\\Carbon\\Carbon' if col_type in [date_type, datetime_type] else col_type
             method = camelize(column)
 
             if column in properties['null']:
@@ -412,7 +412,7 @@ def main(config=None):
                         column=column,
                         ref_column=ref_column
                     ))
-                    use.append('use Illuminate\Database\Eloquent\Relations\HasOne;')
+                    use.append('use Illuminate\\Database\\Eloquent\\Relations\\HasOne;')
 
                 else:
                     if column.startswith(key):
@@ -432,7 +432,7 @@ def main(config=None):
                         column=column,
                         ref_column=ref_column
                     ))
-                    use.append('use Illuminate\Database\Eloquent\Relations\HasMany;')
+                    use.append('use Illuminate\\Database\\Eloquent\\Relations\\HasMany;')
 
         for ref_table, columns in properties['parent'].items():
             ref_key = tables[ref_table]['key']
@@ -456,7 +456,7 @@ def main(config=None):
                     column=column,
                     ref_column=ref_column
                 ))
-                use.append('use Illuminate\Database\Eloquent\Relations\BelongsTo;')
+                use.append('use Illuminate\\Database\\Eloquent\\Relations\\BelongsTo;')
 
         if props:
             props = ['@property %s%s $%s' % (prop_type, ' ' * (type_length - len(prop_type)), column) for
@@ -479,7 +479,7 @@ def main(config=None):
             base = base_class
 
         if 'deleted_at' in properties['column']:
-            use.append('use Illuminate\Database\Eloquent\SoftDeletes;')
+            use.append('use Illuminate\\Database\\Eloquent\\SoftDeletes;')
 
         use = '\n'.join(sorted(set(use)))
         docs = '\n *\n * '.join(docs)
