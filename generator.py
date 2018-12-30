@@ -619,7 +619,8 @@ def main(config=None):
             if f.read_text() == text:
                 continue
 
-        f.write_text(text)
+        with f.open(mode='w', newline='\n') as fd:
+            fd.write(text)
 
     _log.info('cleanup %s', path_model)
     for f in existing_models:
