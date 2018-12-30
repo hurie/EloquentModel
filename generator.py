@@ -591,9 +591,9 @@ def main(config=None):
 
         if 'deleted_at' in properties['column'] and 'SoftDeletes' not in const:
             if const:
-                const = '    use SoftDeletes;\n%s' % const
+                const = '\n    use SoftDeletes;\n%s' % const
             else:
-                const = '    use SoftDeletes;'
+                const = '\n    use SoftDeletes;\n'
 
         text = template_model.format(
             namespace=namespace,
