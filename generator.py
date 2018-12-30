@@ -328,6 +328,8 @@ def main(config=None):
         key = properties['key']
         name = properties['name']
 
+        key_full = '%s_id' % table if key == 'id' else key
+
         use = [
             'use %s;' % base_namespace,
             'use Illuminate\\Database\\Eloquent\\Collection;',
@@ -400,6 +402,8 @@ def main(config=None):
             ref_name = tables[ref_table]['name']
 
             for column, ref_column in columns.items():
+                column_full = '%s_id' % table if column == 'id' else column
+
                 if column == ref_key:
                     ref = ref_name[0].lower() + ref_name[1:]
                     type_length = max(type_length, len(ref_name) + 5)
@@ -415,8 +419,8 @@ def main(config=None):
                     use.append('use Illuminate\\Database\\Eloquent\\Relations\\HasOne;')
 
                 else:
-                    if column.startswith(key):
-                        prefix = column.replace(key, '')
+                    if column_full.startswith(key_full):
+                        prefix = column_full.replace(key_full, '')
                         ref = camelize(ref_table + prefix)
                     else:
                         ref = ref_name
@@ -438,9 +442,13 @@ def main(config=None):
             ref_key = tables[ref_table]['key']
             ref_name = tables[ref_table]['name']
 
+            ref_key_full = '%s_id' % ref_table if ref_key == 'id' else ref_key
+
             for column, ref_column in columns.items():
-                if column.startswith(ref_key):
-                    prefix = column.replace(ref_key, '')
+                column_full = '%s_id' % table if column == 'id' else column
+
+                if column_full.startswith(ref_key_full):
+                    prefix = column_full.replace(ref_key_full, '')
                     ref = camelize(ref_table + prefix)
                 else:
                     ref = ref_name
