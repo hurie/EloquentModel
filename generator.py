@@ -403,7 +403,7 @@ def main(config=None):
                     casts.append("        '%s'%s => '%s'" % (column, ' ' * (column_length - len(column)), col_type))
 
         # relation
-        for ref_table, columns in properties['child'].items():
+        for ref_table, columns in sorted(properties['child'].items()):
             ref_key = tables[ref_table]['key']
             ref_name = tables[ref_table]['name']
 
@@ -444,7 +444,7 @@ def main(config=None):
                     ))
                     use.append('use Illuminate\\Database\\Eloquent\\Relations\\HasMany;')
 
-        for ref_table, columns in properties['parent'].items():
+        for ref_table, columns in sorted(properties['parent'].items()):
             ref_key = tables[ref_table]['key']
             ref_name = tables[ref_table]['name']
 
