@@ -158,7 +158,7 @@ WHERE TABLE_SCHEMA = DATABASE()
     return tables
 
 
-def load_relation(cnx, tables):
+def load_relation(cnx, tables, ignore):
     with closing(cnx.cursor()) as cursor:
         cursor.execute('''\
 SELECT TABLE_NAME, COLUMN_NAME, REFERENCED_TABLE_NAME, REFERENCED_COLUMN_NAME
@@ -169,8 +169,12 @@ WHERE TABLE_SCHEMA = DATABASE()
 ''')
 
         for table, column, ref_table, ref_column in cursor:
+            if table in ignore or ref_table in ignore:
+                continue
+
             if ref_table not in tables[table]['parent']:
-                tables[table]['parent'][ref_table] = OrderedDict()
+                tables[table]['parent'][ref_table] = \
+                    OrderedDict()
 
             if table not in tables[ref_table]['child']:
                 tables[ref_table]['child'][table] = OrderedDict()
@@ -309,15 +313,17 @@ def main(config=None):
         tables = table_definition(cnx)
 
         _log.info('loading table relation')
-        load_relation(cnx, tables)
+        load_relation(cnx, tables, ignore)
 
         for table, value in extract_const.items():
             if table in tables:
                 if table in extract_field:
                     keys = [extract_field[table]]
                 else:
-                    keys = const_fields
-                table_consts[table] = load_const(cnx, table, keys, value)
+                    keys = list(set(const_fields) & set(tables[table]['column'].keys()))
+
+                if keys:
+                    table_consts[table] = load_const(cnx, table, keys, value)
 
     for table, properties in tables.items():
         if table in ignore:
