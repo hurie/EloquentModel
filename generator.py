@@ -429,7 +429,18 @@ def main(config=None):
                         prefix = column_full.replace(key_full, '')
                         ref = camelize(ref_table + prefix)
                     else:
-                        ref = ref_name
+                        column_fulls = column_full.split('_')
+                        key_fulls = key_full.split('_')
+
+                        names = []
+                        for i in range(min(len(column_fulls), len(key_fulls))):
+                            if column_fulls[i] != key_fulls[i]:
+                                names.append(column_fulls[i])
+
+                        if names:
+                            ref = camelize('_'.join([ref_table] + names))
+                        else:
+                            ref = ref_name
 
                     ref = plural(ref[0].lower() + ref[1:])
                     type_length = max(type_length, len(ref_name) + 13 + 5)
@@ -457,7 +468,18 @@ def main(config=None):
                     prefix = column_full.replace(ref_key_full, '')
                     ref = camelize(ref_table + prefix)
                 else:
-                    ref = ref_name
+                    column_fulls = column_full.split('_')
+                    ref_key_fulls = ref_key_full.split('_')
+
+                    names = []
+                    for i in range(min(len(column_fulls), len(ref_key_fulls))):
+                        if column_fulls[i] != ref_key_fulls[i]:
+                            names.append(column_fulls[i])
+
+                    if names:
+                        ref = camelize('_'.join([ref_table] + names))
+                    else:
+                        ref = ref_name
 
                 ref = ref[0].lower() + ref[1:]
                 type_length = max(type_length, len(ref_name) + 5)
