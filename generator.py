@@ -320,7 +320,7 @@ def main(config=None):
                 if table in extract_field:
                     keys = [extract_field[table]]
                 else:
-                    keys = list(set(const_fields) & set(tables[table]['column'].keys()))
+                    keys = [cfield for cfield in const_fields if cfield in tables[table]['column']]
 
                 if keys:
                     table_consts[table] = load_const(cnx, table, keys, value)
