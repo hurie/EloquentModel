@@ -14,6 +14,7 @@ from fnmatch import fnmatch
 from functools import lru_cache
 from pathlib import Path
 
+import yaml
 from mysql.connector import connection
 
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(process)d:%(name)s - %(levelname)s - %(message)s')
@@ -230,13 +231,128 @@ def main(config=None):
     if not config.exists():
         raise Exception('Unable to load configuration %s', config)
 
-    conf = ConfigParser()
-    conf.read_file(config.open())
+    base_classes = {}
+    casts_fields = defaultdict(dict)
 
-    if not conf.has_section('options') and conf['options'].get('result_path') is None:
-        raise Exception('result_path is undefined')
+    hidden_columns = defaultdict(list)
+    additional_properties = defaultdict(dict)
+    additional_children = defaultdict(dict)
+    additional_parents = defaultdict(dict)
+    additional_methods = {}
 
-    path_model = Path(conf['options']['result_path'])
+    const_fields = []
+    extract_const = {}
+    extract_field = {}
+
+    if config.suffix in ['.yaml', '.yml']:
+        conf = yaml.safe_load(config.open())
+
+        path_model = Path(conf['options']['result_path'])
+
+        db = conf['db']
+
+        namespace = conf['model'].get('namespace', 'App')
+        ignore = conf['options'].get('ignored_table', [])
+        hidden_column = conf['model'].get('property', {}).get('hidden', [])
+        history_suffix = conf['model'].get('history_suffix', '')
+        always_add_region = conf['options'].get('always_add_region', False)
+
+        base_class = base_namespace = conf['model'].get('base_class', 'Eloquent')
+        if ' as ' in base_class:
+            base_class, base_namespace = base_class.split(' as ')
+        else:
+            base_class = base_class.split('\\')[-1]
+
+        if 'constant' in conf:
+            const_fields = conf['constant'].get('default_value_column', [])
+            extract_const = conf['constant'].get('key_column', {})
+            extract_field = conf['constant'].get('value_column', {})
+
+        if 'cast' in conf['model'].get('property', {}):
+            for key, value in conf['model']['property']['cast'].items():
+                casts_fields[None][key] = value
+
+        for model, override in conf.get('model-override', {}).items():
+            value = override.get('base_class')
+            if value is not None:
+                if ' as ' in value:
+                    base = value.split(' as ')[1].strip()
+                else:
+                    base = value.split('\\')[-1].strip()
+
+                base_classes[model] = (base, value)
+
+            property_ = override.get('property', {})
+            for key in property_.get('hidden', []):
+                hidden_columns[model].append(key)
+
+            for key, value in property_.get('cast', {}).items():
+                casts_fields[model][key] = value
+
+            additionals = override.get('additional', {})
+            for key, value in additionals.get('children', {}).items():
+                additional_children[model][key] = value
+
+            for key, value in additionals.get('parent', {}).items():
+                additional_parents[model][key] = value
+
+            for value in additionals.get('method', []):
+                additional_methods[model] = value
+
+            for key, value in additionals.get('property', {}).items():
+                additional_properties[model][key] = value
+
+        path_ref = conf['options'].get('reference_path')
+
+    else:
+        conf = ConfigParser()
+        conf.read_file(config.open())
+
+        if not conf.has_section('options') and conf['options'].get('result_path') is None:
+            raise Exception('result_path is undefined')
+
+        path_model = Path(conf['options']['result_path'])
+
+        db = conf['db']
+
+        namespace = conf['options'].get('namespace', 'App')
+        ignore = [x for x in map(str.strip, conf['options'].get('ignored_table', []).splitlines()) if x]
+        hidden_column = [x for x in map(str.strip, conf['options'].get('hidden_column', []).splitlines()) if x]
+        history_suffix = conf['options'].get('history_table_suffix')
+        always_add_region = conf['options'].get('always_add_region', 'false').lower() in ['true', 'yes', 't', 'y', '1']
+
+        base_class = base_namespace = conf.get('options', 'base_class', fallback='Eloquent')
+        if ' as ' in base_class:
+            base_class, base_namespace = base_class.split(' as ')
+        else:
+            base_class = base_class.split('\\')[-1]
+
+        if conf.has_section('base'):
+            for name, value in conf.items('base'):
+                if ' as ' in value:
+                    base = value.split(' as ')[1].strip()
+                else:
+                    base = value.split('\\')[-1].strip()
+
+                base_classes[name] = (base, value)
+
+        if 'constant' in conf:
+            const_fields = [x for x in map(str.strip, conf['constant']['default_value_column'].splitlines()) if x]
+            extract_const = conf['constant/key_column']
+            extract_field = conf['constant/value_column']
+
+        if conf.has_section('cast'):
+            for key, value in conf.items('cast'):
+                if '/' in key:
+                    table, column = key.split('/')
+                    casts_fields[table][column] = value
+                else:
+                    casts_fields[None][key] = value
+
+        path_ref = conf['options'].get('reference_path')
+
+    base_class.strip()
+    base_namespace.strip()
 
     if not path_model.exists():
         path_model.mkdir(parents=True)
@@ -244,52 +360,6 @@ def main(config=None):
     elif not path_model.is_dir():
         raise Exception('Unable to use "%s" as path_model', path_model)
 
-    db = conf['db']
-
-    namespace = conf['options'].get('namespace', 'App')
-    ignore = [x for x in map(str.strip, conf['options'].get('ignored_table', []).splitlines()) if x]
-    hidden_column = [x for x in map(str.strip, conf['options'].get('hidden_column', []).splitlines()) if x]
-    history_suffix = conf['options'].get('history_table_suffix')
-    always_add_region = conf['options'].get('always_add_region', 'false').lower() in ['true', 'yes', 't', 'y', '1']
-
-    base_class = base_namespace = conf.get('options', 'base_class', fallback='Eloquent')
-    if ' as ' in base_class:
-        base_class, base_namespace = base_class.split(' as ')
-    else:
-        base_class = base_class.split('\\')[-1]
-
-    base_class.strip()
-    base_namespace.strip()
-
-    base_classes = {}
-    if conf.has_section('base'):
-        for name, value in conf.items('base'):
-            if ' as ' in value:
-                base = value.split(' as ')[1].strip()
-            else:
-                base = value.split('\\')[-1].strip()
-
-            base_classes[name] = (base, value)
-
-    if 'constant' in conf:
-        const_fields = [x for x in map(str.strip, conf['constant']['default_value_column'].splitlines()) if x]
-        extract_const = conf['constant/key_column']
-        extract_field = conf['constant/value_column']
-    else:
-        const_fields = []
-        extract_const = {}
-        extract_field = {}
-
-    casts_fields = defaultdict(dict)
-    if conf.has_section('cast'):
-        for key, value in conf.items('cast'):
-            if '/' in key:
-                table, column = key.split('/')
-                casts_fields[table][column] = value
-            else:
-                casts_fields[None][key] = value
-
-    path_ref = conf['options'].get('reference_path')
     path_template = local / 'template'
 
     existing_models = []
