@@ -296,8 +296,8 @@ def main(config=None):
             for key, value in additionals.get('parent', {}).items():
                 additional_parents[model][key] = value
 
-            for value in additionals.get('method', []):
-                additional_methods[model] = value
+            if 'method' in additionals:
+                additional_methods[model] = additionals['method']
 
             for key, value in additionals.get('property', {}).items():
                 additional_properties[model][key] = value
@@ -424,6 +424,8 @@ def main(config=None):
         wheres = []
         relations = []
 
+        doc_methods = []
+
         # add history related method if table history exists
         if history_suffix and (table + history_suffix) in tables:
             methods.append(template_history.format(
@@ -450,7 +452,9 @@ def main(config=None):
                 prop_type = 'null|' + prop_type
             type_length = max(type_length, len(prop_type))
 
-            if column in hidden_column:
+            if table in hidden_columns and column in hidden_columns[table]:
+                hidden.append("        '%s'" % column)
+            elif column in hidden_column:
                 hidden.append("        '%s'" % column)
 
             props.append((prop_type, column))
@@ -584,6 +588,10 @@ def main(config=None):
         else:
             base = base_class
 
+        if table in additional_methods:
+            for method in additional_methods[table]:
+                doc_methods.append(' * @method %s' % method)
+
         if 'deleted_at' in properties['column']:
             use.append('use Illuminate\\Database\\Eloquent\\SoftDeletes;')
 
@@ -612,6 +620,11 @@ def main(config=None):
 
         if casts:
             casts = '\n%s,\n    ' % casts
+
+        if doc_methods:
+            doc_methods = '\n *\n%s' % '\n'.join(doc_methods)
+        else:
+            doc_methods = ''
 
         traits = []
 
@@ -699,6 +712,7 @@ def main(config=None):
             name=name,
             const=const,
             docs=docs,
+            doc_methods=doc_methods,
             base=base,
             table=table,
             key=key,

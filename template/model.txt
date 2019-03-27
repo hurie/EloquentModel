@@ -16,7 +16,7 @@ namespace {namespace};
  * @method static {name}                  firstOrNew($attributes, $values = array())
  * @method static {name}                  firstOrCreate($attributes, $values = ['*'])
  * @method static {name}                  updateOrCreate($attributes, $values = ['*'])
- * @method static Collection|{name}[]     get($columns = ['*'])
+ * @method static Collection|{name}[]     get($columns = ['*']){doc_methods}
  */
 class {name} extends {base}
 {{{const}
