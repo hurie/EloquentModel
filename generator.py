@@ -568,12 +568,25 @@ def main(config=None):
                 ))
                 use.append('use Illuminate\\Database\\Eloquent\\Relations\\BelongsTo;')
 
+        if table in additional_children:
+            for ref, ref_name in additional_children[table].items():
+                type_length = max(type_length, len(ref_name) + 13 + 5)
+
+                relations.append(('Collection|%s[]' % ref_name, ref))
+
+        if table in additional_parents:
+            for ref, ref_name in additional_parents[table].items():
+                type_length = max(type_length, len(ref_name) + 5)
+
+                relations.append((ref_name, ref))
+
         if props:
             props = ['@property %s%s $%s' % (prop_type, ' ' * (type_length - len(prop_type)), column) for
                      prop_type, column in props]
             docs.append('\n * '.join(props))
 
         if relations:
+            relations = sorted(relations, key=lambda x: ('1%s' % x[1]) if x[0][0] == 'C' else ('2%s' % x[1]))
             relations = ['@property-read %s%s $%s' % (ref_name, ' ' * (type_length - len(ref_name) - 5), ref) for
                          ref_name, ref in relations]
             docs.append('\n * '.join(relations))
