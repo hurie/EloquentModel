@@ -711,6 +711,10 @@ def main(config=None):
             elif always_add_region:
                 methods = '%s\n    //region %s\n    //endregion\n' % (methods, function_mark)
 
+        elif always_add_region:
+            use = '%s\n//region %s\n//endregion\n' % (use, namespace_mark)
+            methods = '%s\n    //region %s\n    //endregion\n' % (methods, function_mark)
+
         if traits:
             const = '\n%s\n%s' % ('\n'.join(traits), const)
 
