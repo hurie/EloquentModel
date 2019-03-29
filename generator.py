@@ -437,6 +437,11 @@ def main(config=None):
         if table in table_consts and table_consts[table]:
             const = ''.join(['\n    ', '\n    '.join(table_consts[table]), '\n'])
 
+        casts_field = casts_fields.get(None, {})
+        if table in casts_fields:
+            casts_field = casts_field.copy()
+            casts_field.update(casts_fields[table])
+
         column_length = 0
         type_length = 0
 
@@ -461,10 +466,6 @@ def main(config=None):
 
             wheres.append('@method static Builder|%s where%s($value)' % (name, method))
 
-            casts_field = casts_fields.get(None, {})
-            if table in casts_fields:
-                casts_field = casts_field.copy()
-                casts_field.update(casts_fields[table])
 
             for pat, cast in casts_field.items():
                 if fnmatch(column, pat):
