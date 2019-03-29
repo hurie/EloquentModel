@@ -75,7 +75,7 @@ class {name} extends {base}
      * @var array
      */
     protected $dates = [{dates}];
-
+{property}
     /**
      * The attributes that should be cast to native types.
      *

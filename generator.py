@@ -240,6 +240,8 @@ def main(config=None):
     additional_parents = defaultdict(dict)
     additional_methods = {}
 
+    additional_docblock = defaultdict(lambda: defaultdict(dict))
+
     const_fields = []
     extract_const = {}
     extract_field = {}
@@ -301,6 +303,10 @@ def main(config=None):
 
             for key, value in additionals.get('property', {}).items():
                 additional_properties[model][key] = value
+
+        for key, value in conf.get('docblock', {}).items():
+            for subkey, subvalue in value.items():
+                additional_docblock[key][subkey] = subvalue
 
         path_ref = conf['options'].get('reference_path')
 
@@ -420,11 +426,31 @@ def main(config=None):
         dates = []
         casts = []
 
+        additional_property = []
+
         props = []
         wheres = []
         relations = []
 
         doc_methods = []
+
+        for field, value in additional_properties.get(table, {}).items():
+            if isinstance(value, list):
+                value = "[\n        '%s'\n    ]" % "',\n        '".join(value)
+            elif isinstance(value, str):
+                value = "'%s'" % value
+            elif isinstance(value, bool):
+                value = '%s' % ('true' if value else 'false')
+            else:
+                value = '%r' % value
+
+            docblock = ''
+            if field in additional_docblock['property']:
+                docblock = '\n'
+                for line in additional_docblock['property'][field].splitlines():
+                    docblock += '    %s\n' % line
+
+            additional_property.append('%s    protected $%s = %s;\n' % (docblock, field, value))
 
         # add history related method if table history exists
         if history_suffix and (table + history_suffix) in tables:
@@ -640,6 +666,11 @@ def main(config=None):
         else:
             doc_methods = ''
 
+        if additional_property:
+            additional_property = '\n\n'.join(additional_property)
+        else:
+            additional_property = ''
+
         traits = []
 
         f = None if path_ref is None else (Path(path_ref) / (name + '.php'))
@@ -740,6 +771,7 @@ def main(config=None):
             fillable=fillable,
             dates=dates,
             casts=casts,
+            property=additional_property,
             methods=methods
         )
 
