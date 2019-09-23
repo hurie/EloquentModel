@@ -528,8 +528,16 @@ def main(config=None):
 
                 else:
                     if column_full.startswith(key_full):
-                        prefix = column_full.replace(key_full, '')
-                        ref = camelize(ref_table + prefix)
+                        suffix = column_full.replace(key_full, '')
+                        ref = camelize(ref_table + suffix)
+
+                    elif key_full.endswith(column_full):
+                        prefix = key_full.replace(column_full, '')
+                        if not ref_table.startswith(prefix):
+                            ref = camelize(prefix + ref_table)
+                        else:
+                            ref = camelize(ref_table)
+
                     else:
                         column_fulls = column_full.split('_')
                         key_fulls = key_full.split('_')
