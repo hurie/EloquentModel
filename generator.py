@@ -27,6 +27,7 @@ default_type = 'mixed'
 date_type = 'date:Y-m-d'
 datetime_type = 'datetime'
 string_type = 'string'
+time_type = 'time:H:i:s'
 integer_type = 'integer'
 boolean_type = 'boolean'
 float_type = 'float'
@@ -58,7 +59,7 @@ type_map = {
     'set': string_type,
     'smallint': integer_type,
     'text': string_type,
-    'time': datetime_type,
+    'time': string_type,
     'timestamp': datetime_type,
     'tinyint': integer_type,
     'tinytext': string_type,
