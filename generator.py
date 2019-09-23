@@ -416,7 +416,7 @@ def main(config=None):
         use = [
             'use %s;' % base_namespace,
             'use Illuminate\\Database\\Eloquent\\Collection;',
-            'use Illuminate\\Database\\Query\\Builder;',
+            'use Illuminate\\Database\\Eloquent\\Builder;',
         ]
 
         docs = []
