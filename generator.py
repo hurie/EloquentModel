@@ -493,7 +493,6 @@ def main(config=None):
 
             wheres.append('@method static Builder|%s where%s($value)' % (name, method))
 
-
             for pat, cast in casts_field.items():
                 if fnmatch(column, pat):
                     casts.append("        '%s'%s => '%s'" % (column, ' ' * (column_length - len(column)), cast))
@@ -577,6 +576,7 @@ def main(config=None):
                 if column_full.startswith(ref_key_full):
                     prefix = column_full.replace(ref_key_full, '')
                     ref = camelize(ref_table + prefix)
+
                 else:
                     column_fulls = column_full.split('_')
                     ref_key_fulls = ref_key_full.split('_')
