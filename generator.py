@@ -632,6 +632,10 @@ def main(config=None):
         if wheres:
             docs.append('\n * '.join(wheres))
 
+        docs.append('\n * '.join([
+            '@method static Builder|%s query()' % (name,),
+        ]))
+
         if table in base_classes:
             base, cls = base_classes[table]
             use.append('use %s;' % cls)
