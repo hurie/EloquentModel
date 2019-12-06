@@ -477,9 +477,12 @@ def main(config=None):
                 column_length = max(column_length, len(column))
 
         for column, col_type in properties['column'].items():
-            use.append('use Carbon\\Carbon;')
+            if col_type in [date_type, datetime_type]:
+                use.append('use Carbon\\Carbon;')
+                prop_type = 'Carbon'
+            else:
+                prop_type = col_type
 
-            prop_type = 'Carbon' if col_type in [date_type, datetime_type] else col_type
             method = camelize(column)
 
             if column in properties['null']:
